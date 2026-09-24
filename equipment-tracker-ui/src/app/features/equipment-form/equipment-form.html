@@ -1,0 +1,72 @@
+<h2>{{ id ? 'Edit equipment' : 'New equipment' }}</h2>
+
+<form [formGroup]="form" (ngSubmit)="onSubmit()">
+  <div>
+    <label for="name"
+      >Name
+      <input
+        formControlName="name"
+        [attr.aria-invalid]="form.controls.name.touched ? form.controls.name.invalid : null"
+      />
+      @if (form.controls.name.touched && form.controls.name.invalid) {
+        <small class="error">Name is required (max 100 characters).</small>
+      }
+    </label>
+  </div>
+
+  <div>
+    <label for="barcode"
+      >Barcode
+      <input
+        formControlName="barcode"
+        [attr.aria-invalid]="form.controls.barcode.touched ? form.controls.barcode.invalid : null"
+      />
+      @if (form.controls.barcode.touched && form.controls.barcode.invalid) {
+        <span class="error">Barcode is required (max 50 characters).</span>
+      }
+    </label>
+  </div>
+
+  <div>
+    <label for="location"
+      >Location
+      <input
+        formControlName="location"
+        [attr.aria-invalid]="form.controls.location.touched ? form.controls.location.invalid : null"
+      />
+      @if (form.controls.location.touched && form.controls.location.invalid) {
+        <span class="error">Location is required.</span>
+      }
+    </label>
+  </div>
+
+  <div>
+    <label for="interval"
+      >Calibration interval (months)
+      <input
+        formControlName="calibrationIntervalMonths"
+        type="number"
+        [attr.aria-invalid]="
+          form.controls.calibrationIntervalMonths.touched
+            ? form.controls.calibrationIntervalMonths.invalid
+            : null
+        "
+      />
+      @if (
+        form.controls.calibrationIntervalMonths.touched &&
+        form.controls.calibrationIntervalMonths.invalid
+      ) {
+        <span class="error">Must be between 1 and 120.</span>
+      }
+    </label>
+  </div>
+
+  @if (serverError) {
+    <p class="error">{{ serverError }}</p>
+  }
+
+  <button type="submit" [disabled]="saving">
+    {{ saving ? 'Saving...' : 'Save' }}
+  </button>
+  <a routerLink="/equipment" role="button" class="secondary outline">Cancel</a>
+</form>

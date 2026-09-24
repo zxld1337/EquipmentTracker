@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "dgSpecHash": "osBUcMF1Sns=",
+  "success": true,
+  "projectFilePath": "C:\\MY HUB\\Code\\Learn\\EquipmentTracker\\EquipmentCalibrationTracker\\Application\\Application.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\slevi\\.nuget\\packages\\microsoft.extensions.dependencyinjection.abstractions\\8.0.2\\microsoft.extensions.dependencyinjection.abstractions.8.0.2.nupkg.sha512"
+  ],
+  "logs": []
+}

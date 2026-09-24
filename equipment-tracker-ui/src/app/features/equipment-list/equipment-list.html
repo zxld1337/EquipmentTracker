@@ -1,0 +1,47 @@
+
+<h2>Equipments</h2>
+
+<button routerLink="/equipment/new" style="width: 20%;">New equipment</button>
+
+@if (deleteError) {
+  <p class="error">{{ deleteError }}</p>
+}
+
+@if (equipments$ | async; as equipments) {
+  @if (equipments.length === 0) {
+    <p>No equipment yet.</p>
+  } @else {
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th><th>Barcode</th><th>Location</th>
+          <th>Next due</th><th>Status</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (item of equipments; track item.id) {
+          <tr>
+            <td>{{ item.name }}</td>
+            <td>{{ item.barcode }}</td>
+            <td>{{ item.location }}</td>
+            <td>{{ item.nextDueDate ? (item.nextDueDate | date:'yyyy-MM-dd') : '-' }}</td>
+            <td>
+              @if (item.isDue) {
+                 <mark>Due</mark>
+              } @else {
+                OK
+              }
+            </td>
+            <td>
+              <button class="contrast" [routerLink]="['/equipment', item.id, 'edit']">Edit</button>
+              
+              <button class="outline secondary" (click)="onDelete(item)">Delete</button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+} @else {
+  <p>Loading...</p>
+}
