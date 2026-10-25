@@ -1,0 +1,41 @@
+name: Frontend CI
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'equipment-tracker-ui/**'
+      - '.github/workflows/frontend.yml'
+  pull_request:
+    branches: [master]
+    paths:
+      - 'equipment-tracker-ui/**'
+      - '.github/workflows/frontend.yml'
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: equipment-tracker-ui
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: equipment-tracker-ui/package-lock.json
+
+      - name: Install 
+        run: npm ci
+
+      - name: Test
+        run: npm test -- --watch=false
+
+      - name: build
+        run: npm run build
+    
