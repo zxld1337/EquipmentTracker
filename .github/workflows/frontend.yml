@@ -28,7 +28,7 @@ jobs:
         with:
           node-version: 24
           cache: npm
-          cached-dependency-path: equipment-tracker-ui/package-lock.json
+          cache-dependency-path: equipment-tracker-ui/package-lock.json
 
       - name: Install 
         run: npm ci
