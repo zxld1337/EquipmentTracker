@@ -17,6 +17,9 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: "Microsoft.Extensions.*"
         update-types: ["version-update:semver-major"]
+      - dependency-name: "Swashbuckle.AspNetCore"
+        update-types: ["version-update:semver-major"]
+
 
   - package-ecosystem: npm
     directory: /equipment-tracker-ui
@@ -27,6 +30,11 @@ updates:
       angular:
         patterns:
           - "@angular/*"
+    ignore:
+      - dependency-name: "@angular/*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
 
   - package-ecosystem: github-actions
     directory: /
