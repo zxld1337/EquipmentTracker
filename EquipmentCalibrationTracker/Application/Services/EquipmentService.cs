@@ -38,14 +38,16 @@ public class EquipmentService
     public async Task<Result<EquipmentListItemDto>> CreateAsync(
         CreateEquipmentRequest request, CancellationToken ct = default)
     {
-        if (await _repository.BarcodeExistsAsync(request.Barcode, null, ct))
+        var barcode = request.Barcode.Trim();
+
+        if (await _repository.BarcodeExistsAsync(barcode, null, ct))
             return Result<EquipmentListItemDto>.Failure(
-                ErrorType.Conflict, $"Barcode '{request.Barcode}' is already in use.");
+                ErrorType.Conflict, $"Barcode '{barcode}' is already in use.");
 
         var equipment = new Equipment
         {
             Name = request.Name.Trim(),
-            Barcode = request.Barcode.Trim(),
+            Barcode = barcode,
             Location = request.Location.Trim(),
             CalibrationIntervalMonths = request.CalibrationIntervalMonths,
             Status = EquipmentStatus.Active,
