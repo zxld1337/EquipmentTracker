@@ -85,8 +85,32 @@ dotnet test
 
 The unit tests use xUnit v3 with the Microsoft Testing Platform runner (enabled in `global.json`). Application services are tested against a hand-written in-memory fake of `IEquipmentRepository`, so no database is needed.
 
+## AI-agent workflow
+
+AI agents are used as engineering tools in the pipeline, with a human owning the spec and the merge.
+
+```
+spec (human) -> agent implements + writes tests -> build & test -> draft PR -> agent review -> human review & merge
+docs/specs/     agent-implement.yml: propose       verify          open-pr     agent-review.yml   PR checklist
+```
+
+1. **Spec:** write `docs/specs/NNN-name.md` from `_template.md` with testable acceptance criteria, set `Status: ready`.
+2. **Implement:** Actions → *Agent implement* → run with the spec path. The agent (Claude Code, rules in `CLAUDE.md`) writes code and tests.
+3. **Verify:** the patch is built and tested in a separate job with no secrets.
+4. **Draft PR:** opened with the agent's summary (which test covers which criterion) and the test result.
+5. **Agent review:** a second, read-only agent comments on the PR against `CLAUDE.md` and the spec.
+6. **Human review:** the PR checklist; the workflow cannot approve or merge.
+
+Guardrails:
+- Least privilege: the agent jobs have a read-only token and no shell; only trusted workflow code pushes or comments.
+- Agent output never runs in a job that holds a secret; build and tests run without one.
+- The agent may only change application and test code. Dependency files, `.github/`, `CLAUDE.md` and build config are rejected.
+- Patches and review text are scanned for token-like strings before they leave the job; the CLI version is pinned.
+
+Setup: add a `CLAUDE_CODE_OAUTH_TOKEN` repository secret and enable *Settings → Actions → General → Allow GitHub Actions to create and approve pull requests*.
+
 ## Roadmap
 
 - Integration tests for the API with `WebApplicationFactory`
-- Inject `TimeProvider` instead of using `DateTime.Today` directly, so date logic can be tested deterministically
+- Inject `TimeProvider` instead of using `DateTime.Today` directly, so date logic can be tested deterministically (spec: `docs/specs/001-time-provider.md`)
 - Calibration management in the UI

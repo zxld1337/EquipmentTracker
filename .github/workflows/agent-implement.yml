@@ -1,0 +1,200 @@
+name: Agent implement
+
+# Spec -> agent -> tests -> draft PR -> AI review -> human review and merge.
+#   propose : read-only token, no Bash for the agent. The agent only edits files; the result is a patch.
+#   verify  : builds and tests the patch with no secrets and a read-only token.
+#   open-pr : trusted code re-checks the patch, pushes a branch and opens a DRAFT PR. Nothing here runs agent code.
+# The workflow cannot merge. Dependency and pipeline files are human-only.
+
+on:
+  workflow_dispatch:
+    inputs:
+      spec:
+        description: 'Spec file, e.g. docs/specs/001-time-provider.md'
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: agent-implement
+  cancel-in-progress: false
+
+env:
+  CLAUDE_CODE_VERSION: 2.1.319
+
+jobs:
+  propose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      changed: ${{ steps.patch.outputs.changed }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Validate spec path
+        env:
+          SPEC: ${{ inputs.spec }}
+        run: |
+          [[ "$SPEC" =~ ^docs/specs/[0-9]{3}-[a-z0-9-]+\.md$ ]] || { echo "::error::Invalid spec path"; exit 1; }
+          [[ -f "$SPEC" ]] || { echo "::error::Spec not found"; exit 1; }
+          grep -q '^\*\*Status:\*\* ready' "$SPEC" || { echo "::error::Spec status is not 'ready'"; exit 1; }
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Install pinned Claude Code CLI (outside the work tree)
+        run: |
+          mkdir -p "$RUNNER_TEMP/cc" && cd "$RUNNER_TEMP/cc"
+          npm install --no-audit --no-fund --prefix . "@anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}"
+          ./node_modules/.bin/claude --version
+
+      - name: Agent implements the spec
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          SPEC: ${{ inputs.spec }}
+        run: |
+          PROMPT="Implement the spec in ${SPEC}. Follow CLAUDE.md. Write the code and the xUnit tests for every \
+          acceptance criterion. You cannot run anything; the pipeline builds and tests your change after you finish, \
+          so read the existing code and tests carefully and keep the change minimal. Do not edit the spec. \
+          End with: a list of changed files, which test covers which acceptance criterion, and open questions."
+          "$RUNNER_TEMP/cc/node_modules/.bin/claude" -p "$PROMPT" \
+            --model claude-sonnet-5-5 --max-turns 60 \
+            --allowedTools "Read,Glob,Grep,Edit,Write" --disallowedTools "Bash,WebFetch,WebSearch" \
+            --permission-mode acceptEdits | tee "$RUNNER_TEMP/agent-summary.md"
+
+      - name: Build patch and check boundaries
+        id: patch
+        run: |
+          git add -A
+          git diff --cached --binary > "$RUNNER_TEMP/agent.patch"
+          if [[ ! -s "$RUNNER_TEMP/agent.patch" ]]; then echo "changed=false" >> "$GITHUB_OUTPUT"; exit 0; fi
+          bad=0
+          while IFS= read -r f; do
+            if [[ ! "$f" =~ ^(EquipmentCalibrationTracker/(Domain|Application|Infrastructure|Api|Tests)/|equipment-tracker-ui/src/) ]] \
+               || [[ "$f" =~ \.(csproj|props|targets|sln)$ ]] || [[ "$f" =~ (package(-lock)?\.json|nuget\.config)$ ]]; then
+              echo "::error::Agent touched a forbidden path: $f"; bad=1
+            fi
+          done < <(git diff --cached --name-only)
+          if grep -qE 'sk-ant-[A-Za-z0-9_-]{10,}' "$RUNNER_TEMP/agent.patch"; then echo "::error::Token-like string in patch"; bad=1; fi
+          [[ $bad -eq 0 ]] || exit 1
+          cp "$RUNNER_TEMP/agent-summary.md" "$RUNNER_TEMP/out-summary.md"
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v4
+        if: steps.patch.outputs.changed == 'true'
+        with:
+          name: agent-patch
+          path: |
+            ${{ runner.temp }}/agent.patch
+            ${{ runner.temp }}/out-summary.md
+          retention-days: 7
+
+  verify:
+    needs: propose
+    if: needs.propose.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      result: ${{ steps.test.outputs.result }}
+    defaults:
+      run:
+        working-directory: EquipmentCalibrationTracker
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: agent-patch
+          path: ${{ runner.temp }}/agent
+      - name: Apply patch
+        run: git -C .. apply --index "$RUNNER_TEMP/agent/agent.patch"
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+      - name: Build and test (no secrets)
+        id: test
+        run: |
+          set -o pipefail
+          if dotnet build --configuration Release 2>&1 | tee "$RUNNER_TEMP/test.log" \
+             && dotnet test --no-build --configuration Release 2>&1 | tee -a "$RUNNER_TEMP/test.log"; then
+            echo "result=passed" >> "$GITHUB_OUTPUT"
+          else
+            echo "result=failed" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: test-log
+          path: ${{ runner.temp }}/test.log
+          retention-days: 7
+
+  open-pr:
+    needs: [propose, verify]
+    if: needs.propose.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: agent-patch
+          path: ${{ runner.temp }}/agent
+      - name: Re-check and commit patch
+        id: commit
+        env:
+          SPEC: ${{ inputs.spec }}
+        run: |
+          git apply --index "$RUNNER_TEMP/agent/agent.patch"
+          while IFS= read -r f; do
+            if [[ ! "$f" =~ ^(EquipmentCalibrationTracker/(Domain|Application|Infrastructure|Api|Tests)/|equipment-tracker-ui/src/) ]] \
+               || [[ "$f" =~ \.(csproj|props|targets|sln)$ ]] || [[ "$f" =~ (package(-lock)?\.json|nuget\.config)$ ]]; then
+              echo "::error::Forbidden path: $f"; exit 1
+            fi
+          done < <(git diff --cached --name-only)
+          slug=$(basename "$SPEC" .md)
+          branch="agent/${slug}-${GITHUB_RUN_ID}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$branch"
+          git commit -m "agent: implement ${slug}" -m "Spec: ${SPEC}"
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+          echo "slug=$slug" >> "$GITHUB_OUTPUT"
+      - name: Push branch (token only in this step)
+        env:
+          TOKEN: ${{ github.token }}
+          BRANCH: ${{ steps.commit.outputs.branch }}
+        run: |
+          auth=$(printf 'x-access-token:%s' "$TOKEN" | base64 -w0)
+          git -c http.extraheader="AUTHORIZATION: basic $auth" push origin "HEAD:refs/heads/$BRANCH"
+      - name: Open draft PR and request AI review
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SPEC: ${{ inputs.spec }}
+          BRANCH: ${{ steps.commit.outputs.branch }}
+          SLUG: ${{ steps.commit.outputs.slug }}
+          TESTS: ${{ needs.verify.outputs.result || 'not run' }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          {
+            echo "## Spec"; echo "\`$SPEC\`"; echo
+            echo "## Pipeline"; echo "- Build and tests (no secrets): **$TESTS**"; echo "- Run: $RUN_URL"; echo
+            echo "## Agent summary"; echo
+            head -c 20000 "$RUNNER_TEMP/agent/out-summary.md"; echo
+            sed -n '/^## Review checklist/,$p' .github/pull_request_template.md
+          } > "$RUNNER_TEMP/body.md"
+          url=$(gh pr create --draft --base "${GITHUB_REF_NAME}" --head "$BRANCH" \
+                --title "agent: ${SLUG} (tests ${TESTS})" --body-file "$RUNNER_TEMP/body.md")
+          echo "Opened $url"
+          gh workflow run agent-review.yml --ref "${GITHUB_REF_NAME}" -f pr="${url##*/}"
