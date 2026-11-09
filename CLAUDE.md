@@ -14,6 +14,11 @@ You implement one spec at a time from `docs/specs/`. The spec is the contract: d
 - Nullable is enabled: no `!` suppression without a comment explaining why it is safe.
 - No new NuGet/npm packages unless the spec allows it.
 
+## Security
+- Validate input at the boundary; never trust ids or states sent by the client.
+- No raw SQL, no secrets or personal data in logs, exceptions or Problem Details.
+- Every state change that matters (approval, rejection, delete) writes an audit entry: who, when, what, old/new value.
+
 ## Tests
 - Every acceptance criterion has at least one xUnit v3 test in `EquipmentCalibrationTracker/Tests/UnitTests`.
 - Test names: `Method_Condition_ExpectedResult`. Pass `TestContext.Current.CancellationToken`.
