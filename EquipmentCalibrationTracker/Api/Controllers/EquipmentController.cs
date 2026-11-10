@@ -41,6 +41,19 @@ public class EquipmentController : ControllerBase
     }
 
 
+    [HttpGet("due")]
+    public async Task<ActionResult<List<EquipmentListItemDto>>> GetDue(
+        CancellationToken ct,
+        int days = 30)
+    {
+        var result = await _equipmentService.GetDueAsync(days, ct);
+
+        return result.IsSuccess
+            ? Ok(result.Value)
+            : ToErrorResponse(result.ErrorType, result.ErrorMessage);
+    }
+
+
     [HttpGet("{id:int}")]
     public async Task<ActionResult<EquipmentDetailsDto>> GetById(
         int id, 

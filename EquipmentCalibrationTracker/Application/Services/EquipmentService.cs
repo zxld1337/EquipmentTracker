@@ -24,6 +24,26 @@ public class EquipmentService
     }
 
 
+    // Overdue items are included: "due within N days" means NextDueDate <= today + N (inclusive).
+    public async Task<Result<List<EquipmentListItemDto>>> GetDueAsync(int days, CancellationToken ct = default)
+    {
+        if (days is < 1 or > 365)
+            return Result<List<EquipmentListItemDto>>.Failure(
+                ErrorType.Validation, "days must be between 1 and 365.");
+
+        var today = DateTime.Today;
+        var limit = today.AddDays(days);
+        var equipment = await _repository.GetAllAsync(ct);
+
+        return Result<List<EquipmentListItemDto>>.Success(equipment
+            .Where(e => e.Status != EquipmentStatus.Retired
+                        && e.NextDueDate.HasValue
+                        && e.NextDueDate.Value.Date <= limit)
+            .OrderBy(e => e.NextDueDate)
+            .Select(e => e.ToListItemDto(today))
+            .ToList());
+    }
+
     public async Task<Result<EquipmentDetailsDto>> GetByIdAsync(int id, CancellationToken ct = default)
     {
         var equipment = await _repository.GetWithCalibrationsAsync(id, ct);
