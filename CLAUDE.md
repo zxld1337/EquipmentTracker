@@ -97,3 +97,4 @@ UnitTests → Application, Domain
 - All backend and frontend tests pass.
 - No test deleted, skipped or weakened to make a change pass.
 - No secrets committed (keys, passwords, real connection strings).
+- Harness: run scripts/check.sh; a change is done only when it prints ALL CHECKS PASSED.
