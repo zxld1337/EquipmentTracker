@@ -73,16 +73,24 @@ UnitTests → Application, Domain
 - TODO (owner decides): are Api/Infrastructure tests (integration, EF) wanted, and where would they go?
 
 ## 7. Forbidden patterns
-TODO (owner decides): none confirmed yet.
-<!-- PROPOSALS ONLY, not yet agreed:
-  - Throwing exceptions for expected failures instead of returning Result<T>.Failure
-  - Business rules in controllers, repositories or AppDbContext
-  - Api using AppDbContext or EquipmentRepository directly instead of an Application service
-  - Returning entities from controllers instead of DTOs
-  - Adding a project reference that points outward (e.g. Domain → Application)
-  - Committing real connection strings or secrets to appsettings*.json
-  - Editing an applied migration instead of adding a new one
--->
+
+### Checked by scripts/check.sh
+- **No sync-over-async:** no `.Wait()` or `.GetAwaiter().GetResult()` in `*.cs`. Use `await`.
+- **Controllers stay thin:** no `AppDbContext`, `EquipmentRepository` or `IEquipmentRepository` in `Api/Controllers/`.
+  Controllers call Application services only. (`Program.cs` may use `AppDbContext` for seeding.)
+- **No outward project references:** `Domain.csproj` has no `<ProjectReference>`;
+  `Application.csproj` references only `Domain`.
+- **No secrets in config:** no `Password=`, `Pwd=` or `User ID=` in `appsettings*.json`.
+  Local dev uses `Trusted_Connection=True`; anything else goes to user-secrets or environment variables.
+- **HTTP only in services (UI):** `HttpClient` is used only in `equipment-tracker-ui/src/app/services/`, never in `features/` components.
+
+### Checked by the reviewer agent and by me (needs judgement)
+- Throwing exceptions for expected failures instead of returning `Result<T>.Failure`.
+- Business rules in controllers, repositories or `AppDbContext`.
+- Returning entities from controllers instead of DTOs.
+- `.Result` on a `Task` (cannot be grepped: `CalibrationRecord.Result` is a domain property).
+- Editing an existing migration instead of adding a new one.
+- Weakening an assertion to make a test pass (the harness only catches deleted or skipped tests).
 
 ## 8. Definition of done
 - Backend and frontend build with the commands in section 3.
