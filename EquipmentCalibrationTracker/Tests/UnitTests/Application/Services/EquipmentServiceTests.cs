@@ -96,11 +96,38 @@ public class EquipmentServiceTests
     [Theory]
     [InlineData(1)]
     [InlineData(365)]
-    public async Task GetDueAsync_WhenDaysAtBoundary_ReturnsSuccess(int days)
+    public async Task GetDueAsync_WhenDaysAtBoundary_IncludesLastDayAndExcludesNextDay(int days)
     {
+        var today = DateTime.Today;
+        _repository.Equipments.AddRange(
+        [
+            new Equipment { Id = 1, NextDueDate = today.AddDays(days) },
+            new Equipment { Id = 2, NextDueDate = today.AddDays(days + 1) }
+        ]);
+
         var result = await _service.GetDueAsync(days, TestContext.Current.CancellationToken);
 
         Assert.True(result.IsSuccess);
+        Assert.Equal([1], result.Value!.Select(e => e.Id));
+    }
+
+
+    [Fact]
+    public async Task GetDueAsync_WhenActiveItemIsOverdue_IncludesIt()
+    {
+        _repository.Equipments.Add(new Equipment
+        {
+            Id = 1,
+            Status = EquipmentStatus.Active,
+            NextDueDate = DateTime.Today.AddDays(-1)
+        });
+
+        var result = await _service.GetDueAsync(30, TestContext.Current.CancellationToken);
+
+        Assert.True(result.IsSuccess);
+        var item = Assert.Single(result.Value!);
+        Assert.Equal(1, item.Id);
+        Assert.True(item.IsDue);
     }
 
 
