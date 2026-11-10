@@ -8,6 +8,11 @@ export const routes: Routes = [
             .then(m => m.EquipmentList)
     },
     {
+        path: 'equipment/due',
+        loadComponent: () => import('./features/due-soon/due-soon')
+            .then(m => m.DueSoon)
+    },
+    {
         path: 'equipment/new',
         loadComponent: () => import('./features/equipment-form/equipment-form')
             .then(m => m.EquipmentForm)

@@ -1,0 +1,47 @@
+<h2>Due soon</h2>
+
+<form (submit)="$event.preventDefault(); onShow()">
+  <fieldset role="group">
+    <input type="number" min="1" max="365" step="1" aria-label="Days" [formControl]="days" />
+    <button type="submit">Show</button>
+  </fieldset>
+</form>
+
+@if (invalid()) {
+  <p class="error">Enter a whole number between 1 and 365.</p>
+}
+
+@if (error(); as message) {
+  <p class="error">{{ message }}</p>
+} @else if (items(); as list) {
+  @if (list.length === 0) {
+    <p>No equipment due in the next {{ shownDays() }} days.</p>
+  } @else {
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th><th>Barcode</th><th>Location</th><th>Next due</th><th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (item of list; track item.id) {
+          <tr>
+            <td>{{ item.name }}</td>
+            <td>{{ item.barcode }}</td>
+            <td>{{ item.location }}</td>
+            <td>{{ item.nextDueDate ? (item.nextDueDate | date:'yyyy-MM-dd') : '-' }}</td>
+            <td>
+              @if (item.isDue) {
+                <mark>Overdue</mark>
+              } @else {
+                Due soon
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+} @else {
+  <p>Loading...</p>
+}
