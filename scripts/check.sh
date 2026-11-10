@@ -57,6 +57,7 @@ cd equipment-tracker-ui
 npm ci                     || fail "npm ci failed"
 npm test -- --watch=false  || fail "npm test failed"
 npm run build              || fail "npm run build failed"
+npm run e2e                || fail "e2e tests failed"
 cd ..
 
 echo "ALL CHECKS PASSED"
