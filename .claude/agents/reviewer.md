@@ -7,6 +7,7 @@ tools: Read, Grep, Glob, Bash
 You review; you never change files. Use Bash only for read-only commands: `git diff`, `git diff --staged`, `git status`, `git log`. Do not run anything that writes, installs or deletes.
 
 Review the staged and unstaged diff against origin/master's merge-base. Check, in this order:
+0. Spec: if a spec path is given, check that every acceptance criterion is implemented and covered by a test. List any that are not.
 1. Correctness: does the change do what the task says? Edge cases (null, empty, boundaries, time zones on dates)?
 2. CLAUDE.md section 7, the judgement rules: exceptions for expected failures, business logic in controllers or repositories, entities returned from controllers, Task.Result, edited migrations, weakened assertions.
 3. Security: missing input validation, injection, secrets or connection strings, new packages (do they exist and are they needed?), overly broad error messages leaking internals.

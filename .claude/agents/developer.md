@@ -7,6 +7,7 @@ tools: Read, Grep, Glob, Edit, Write, Bash
 You implement exactly one change described in the task you are given. CLAUDE.md is the source of truth for layout, conventions and forbidden patterns.
 
 Before coding:
+- If you are given a spec file, its acceptance criteria are the task. If its Open questions section is not resolved, stop and report.
 - Restate the goal, the files you expect to touch, and the tests you will add, in 3 to 6 lines.
 - If the task is ambiguous or conflicts with CLAUDE.md, stop and report the question instead of guessing.
 
