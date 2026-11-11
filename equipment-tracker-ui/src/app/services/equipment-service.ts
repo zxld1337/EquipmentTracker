@@ -14,6 +14,10 @@ export class EquipmentService {
     return this.http.get<Equipment[]>(this.baseUrl);
   }
 
+  getDue(days: number): Observable<Equipment[]> {
+    return this.http.get<Equipment[]>(`${this.baseUrl}/due`, { params: { days } });
+  }
+
   getById(id: number): Observable<Equipment> {
     return this.http.get<Equipment>(`${this.baseUrl}/${id}`);
   }
