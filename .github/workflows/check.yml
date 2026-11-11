@@ -1,0 +1,32 @@
+name: Check
+
+on:
+  pull_request:
+    branches: [master]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0   # check.sh needs origin/master for the merge-base
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: equipment-tracker-ui/package-lock.json
+
+      - name: Install Playwright browser
+        working-directory: equipment-tracker-ui
+        run: npm ci && npx playwright install --with-deps chromium
+
+      - name: Harness
+        run: bash scripts/check.sh

@@ -83,6 +83,7 @@ UnitTests → Application, Domain
 - **No secrets in config:** no `Password=`, `Pwd=` or `User ID=` in `appsettings*.json`.
   Local dev uses `Trusted_Connection=True`; anything else goes to user-secrets or environment variables.
 - **HTTP only in services (UI):** `HttpClient` is used only in `equipment-tracker-ui/src/app/services/`, never in `features/` components.
+- Never add claude as co-developer or use any branding.
 
 ### Checked by the reviewer agent and by me (needs judgement)
 - Throwing exceptions for expected failures instead of returning `Result<T>.Failure`.
