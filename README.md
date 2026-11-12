@@ -5,6 +5,12 @@ A full-stack app for tracking measuring equipment and its calibration history: w
 **Backend:** ASP.NET Core 8 Web API · Entity Framework Core 8 · SQL Server (LocalDB) · xUnit v3
 **Frontend:** Angular 21 · Pico CSS
 
+## How this project was built
+
+- **Hand-written (Sep–Oct 2026):** the .NET 8 API with its four layers, the Angular UI, the unit tests and the CI workflows.
+- **AI agent workflow (Nov 2026):** I added a development workflow on top of the finished app: a context file (`CLAUDE.md`), a harness that defines "done" (`scripts/check.sh`), Claude Code subagents (product owner, developer, reviewer, e2e tester) in `.claude/`, Playwright end-to-end tests, and a CI job that reviews pull requests.
+- **Built through that workflow:** the `GET /api/equipment/due` endpoint and the *Due soon* page. Each started from a spec I approved (`docs/specs/`), passed the harness and an agent review, and I read the diff before committing.
+
 ## Features
 
 - Create, list, edit and (soft) delete equipment
